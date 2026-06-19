@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+      body { font-family: sans-serif; text-align: center; margin: 0; background-color: #f0f4f8; font-size: 18px; color: #333; padding-bottom: 80px; }
+      .container { background: white; padding: 25px 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; margin: 20px auto; position: relative; }
+      .report-container { max-width: 800px; padding: 15px; margin: 20px auto; background: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+      
+      select, input[type="number"], input[type="text"], input[type="password"], input[type="date"], textarea { width: 100%; padding: 15px; margin: 8px 0; font-size: 18px; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+      button { padding: 15px; font-size: 18px; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px;}
+      
+      .btn-primary { background-color: #1976d2; } .btn-danger { background-color: #d32f2f; } .btn-cancel { background-color: #9e9e9e; }
+      .hidden { display: none !important; }
+      
+      .task-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; overflow: hidden; text-align: left; border: 1px solid #e0e0e0; }
+      .task-header { padding: 15px; color: white; font-weight: bold; font-size: 22px; display: flex; flex-direction: column; }
+      .task-header .id-text { font-size: 15px; opacity: 0.9; margin-top: 5px; font-weight: normal; }
+      
+      .bg-sugar { background-color: #e53935; } .bg-bp { background-color: #fb8c00; } .bg-inhaler { background-color: #00897b; } .bg-language { background-color: #00695c; } .bg-insulin { background-color: #8e24aa; } .bg-meds { background-color: #3949ab; } .bg-prn { background-color: #d81b60; } .bg-breath { background-color: #0288d1; } .bg-exc { background-color: #ff9800; } .bg-urine { background-color: #fbc02d; } .bg-stool { background-color: #795548; } .bg-weight { background-color: #00838f; }
+      
+      .time-row { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; }
+      .time-row:last-child { border-bottom: none; }
+      .time-label { font-size: 22px; font-weight: bold; color: #424242; width: 80px; flex-shrink: 0; }
+      .time-action { flex: 1; padding-left: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; } 
+      
+      .double-input { display: flex; gap: 5px; align-items: flex-end; width: 100%; justify-content: space-between;}
+      .double-input input { margin: 0; padding: 12px; text-align: center; } .double-input span { font-size: 28px; color: #999; margin-bottom: 10px; }
+      
+      .btn-check { background-color: #1976d2; color: white; padding: 10px 18px; font-size: 16px; margin: 0; border-radius: 20px; width: auto; min-width: 120px; }
+      .btn-save { background-color: #4CAF50; padding: 10px 18px; font-size: 16px; margin: 0; border-radius: 20px; width: auto; min-width: 120px; }
+      .log-done { background-color: #e8f5e9; color: #2e7d32; padding: 10px 15px; border-radius: 8px; font-size: 15px; border: 1px solid #a5d6a7; text-align: center; width: auto; }
+      .log-done-sub { font-size: 13px; color: #666; margin-top: 4px; }
+      
+      #topBar { background: #1976d2; color: white; padding: 15px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+      
+      table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 15px; }
+      th, td { padding: 10px 5px; border-bottom: 1px solid #ddd; text-align: center; }
+      .status-btn { padding: 6px 12px; font-size: 14px; border-radius: 20px; width: auto; margin: 0; }
+      .btn-active { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #4CAF50; } .btn-inactive { background-color: #ffebee; color: #c62828; border: 1px solid #f44336; }
+      .med-input-cell { width: 45px !important; padding: 5px !important; margin: 0 !important; text-align: center; font-size: 16px !important; }
+
+      .navbar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #fff; display: flex; justify-content: space-around; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+      .nav-item { flex: 1; padding: 8px 0; font-size: 14px; color: #888; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .nav-item.active { color: #1976d2; font-weight: bold; border-top: 4px solid #1976d2; background-color: #e3f2fd; }
+      .nav-icon { font-size: 24px; margin-bottom: 4px; }
+
+      .admin-tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #ccc; }
+      .admin-tab { flex: 1; padding: 10px; cursor: pointer; font-weight: bold; color: #888; font-size: 16px; }
+      .admin-tab.active { color: #4527a0; border-bottom: 4px solid #4527a0; }
+
+      .report-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 14px; }
+      .report-table th { background-color: #f5f5f5; border: 1px solid #ccc; padding: 8px; text-align: center; font-weight: bold; color: #333; }
+      .report-table td { border: 1px solid #ccc; padding: 8px; text-align: center; color: #555; }
+      
+      .chart-wrapper { position: relative; height: 250px; width: 100%; margin-bottom: 20px; page-break-inside: avoid; }
+      .table-wrapper { page-break-inside: avoid; margin-bottom: 20px; }
+    </style>
+  </head>
+  <body onload="initApp()">
+
+    <div id="loginView" class="container" style="margin-top: 60px;">
+      <div id="topRightMenu" style="position: absolute; top: 15px; right: 20px; z-index: 10; display: flex; gap: 20px;">
+        <div style="font-size: 28px; cursor: pointer;" onclick="openReportView()" title="產出圖表日報">📄</div>
+        <div style="font-size: 28px; cursor: pointer;" onclick="showView('adminLoginView')" title="管理員登入">⚙️</div>
+      </div>
+      <h2 style="color: #1976d2; margin-bottom: 5px; margin-top: 30px;">🏥 阿婆居家照護紀錄</h2>
+      <h3 style="color: #666; margin-top: 0; margin-bottom: 30px;">Catatan Perawatan</h3>
+      <label style="font-weight: bold; color: #333; display: block; text-align: left; margin-bottom: 5px;">1. 選擇名字 / Pilih Nama Anda:</label>
+      <select id="nurseSelect"><option value="">-- 請選擇 / Pilih --</option></select>
+      <button class="btn-primary" onclick="login()">登入系統 / Masuk</button>
+      <div id="loginMsg" style="margin-top: 20px; font-weight: bold; color: #e53935;"></div>
+    </div>
+
+    <div id="reportView" class="report-container hidden">
+      <h2 style="color: #0288d1; margin-top: 0;">📄 居家大數據分析報表</h2>
+      <div style="margin-bottom: 15px; background: #e1f5fe; padding: 10px; border-radius: 8px;">
+        <label style="font-weight: bold; color: #01579b; font-size: 16px;">選擇查詢日期：</label>
+        <input type="date" id="reportDateInput" style="width: auto; display: inline-block; padding: 8px; margin-left: 10px; border: 1px solid #0288d1;" onchange="loadReportData()">
+      </div>
+      
+      <div id="pdfCaptureArea" style="background: #fff; padding: 20px; border: 1px solid #ccc; border-radius: 8px; text-align: left;">
+        <h2 style="text-align: center; color: #1976d2; margin-top: 0; margin-bottom: 5px;">阿婆居家照護日報</h2>
+        <p style="text-align: center; color: #666; margin-top: 0; font-weight: bold; font-size: 16px;" id="reportTitleDate">載入中...</p>
+
+        <h3 style="color: #00838f; border-bottom: 2px solid #00838f; padding-bottom: 5px; margin-top: 20px;">📈 體重趨勢 (近7天)</h3>
+        <div class="chart-wrapper"><canvas id="weightChart"></canvas></div>
+
+        <h3 style="color: #d32f2f; border-bottom: 2px solid #d32f2f; padding-bottom: 5px; margin-top: 20px;">📈 血壓趨勢 (近7天)</h3>
+        <div class="chart-wrapper"><canvas id="bpChart"></canvas></div>
+
+        <h3 style="color: #f57c00; border-bottom: 2px solid #f57c00; padding-bottom: 5px; margin-top: 20px;">📈 血糖趨勢 (近7天)</h3>
+        <div class="chart-wrapper"><canvas id="sugarChart"></canvas></div>
+
+        <div class="table-wrapper">
+          <h3 style="color: #0288d1; border-bottom: 2px solid #0288d1; padding-bottom: 5px; margin-top: 20px;">🫁 當日自主呼吸訓練 (SBT)</h3>
+          <div id="reportBreathDiv"></div>
+        </div>
+
+        <div class="table-wrapper">
+          <h3 style="color: #e65100; border-bottom: 2px solid #e65100; padding-bottom: 5px; margin-top: 20px;">💪 當日復健運動</h3>
+          <div id="reportExcSummaryDiv" style="margin-bottom: 15px; font-size: 16px; color: #d84315; background-color: #fff3e0; padding: 10px; border-radius: 8px; border: 1px dashed #ffb74d;"></div>
+          <div id="reportExcDiv"></div>
+        </div>
+
+        <div class="table-wrapper">
+          <h3 style="color: #795548; border-bottom: 2px solid #795548; padding-bottom: 5px; margin-top: 20px;">🚽 當日排泄紀錄</h3>
+          <div id="reportExcretionDiv"></div>
+        </div>
+      </div>
+
+      <button id="downloadPdfBtn" class="btn-primary" style="background-color: #d32f2f; margin-top: 20px;" onclick="downloadPDF()">📥 下載 A4 醫療報告 PDF</button>
+      <button style="background-color: #9e9e9e;" onclick="showView('loginView')">🔙 返回首頁</button>
+    </div>
+
+    <div id="adminLoginView" class="container hidden" style="margin-top: 60px;">
+      <h2 style="color: #4527a0;">⚙️ 管理員登入</h2>
+      <input type="text" id="adminAcc" placeholder="輸入帳號 (預設 admin)"><input type="password" id="adminPwd" placeholder="輸入密碼 (預設 1234)">
+      <button class="btn-primary" style="background-color: #4527a0;" onclick="adminLogin()">登入</button><button class="btn-cancel" onclick="showView('loginView')">返回</button>
+      <div id="adminLoginMsg" style="margin-top: 15px; font-weight: bold; color: #d32f2f;"></div>
+    </div>
+
+    <div id="adminPanelView" class="container hidden" style="margin-top: 20px;">
+      <h2 style="color: #4527a0; margin-top: 0;">⚙️ 管理員控制台</h2>
+      <div class="admin-tabs">
+        <div id="tabBtnA1" class="admin-tab active" onclick="switchAdminTab(1)">💊 藥物</div>
+        <div id="tabBtnA2" class="admin-tab" onclick="switchAdminTab(2)">⚙️ 設定</div>
+        <div id="tabBtnA3" class="admin-tab" onclick="switchAdminTab(3)">👩‍⚕️ 人員</div>
+      </div>
+
+      <div id="adminTab1">
+        <div style="background-color: #e8eaf6; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 20px; border: 1px solid #9fa8da;">
+          <h3 style="margin-top: 0; color: #283593;">💊 七天常規給藥數量 (顆)</h3>
+          <table id="medMatrixTable"><thead><tr><th>星期</th><th>07:30</th><th>12:30</th><th>18:30</th><th>21:00</th></tr></thead><tbody id="medMatrixBody"></tbody></table>
+          <button style="background-color: #3949ab; padding: 10px; margin-top: 15px;" onclick="saveMedMatrix()">💾 儲存常規數量</button>
+        </div>
+        <div style="background-color: #fff3e0; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 20px; border: 1px solid #ffcc80;">
+          <h3 style="margin-top: 0; color: #e65100;">💊 額外特定藥物</h3>
+          <div id="extraMedsListLog"></div>
+          <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center;"><input type="text" id="exName" placeholder="輸入藥名" style="margin:0; padding: 10px; flex: 2;"><select id="exDay" style="margin:0; padding: 10px; flex: 1;"><option value="All">每天</option><option value="0">週日</option><option value="1">週一</option><option value="2">週二</option><option value="3">週三</option><option value="4">週四</option><option value="5">週五</option><option value="6">週六</option></select></div>
+          <select id="exTime" style="margin:10px 0 0 0; padding: 10px; width: 100%;"><option value="07:30">時段：07:30</option><option value="12:30">時段：12:30</option><option value="18:30">時段：18:30</option><option value="21:00">時段：21:00</option></select>
+          <button style="background-color: #fb8c00; padding: 10px;" onclick="addExtraMed()">➕ 新增額外藥物</button>
+        </div>
+        <div style="background-color: #f3e5f5; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 20px; border: 1px solid #ce93d8;">
+          <h3 style="margin-top: 0; color: #6a1b9a;">💉 長效型胰島素</h3>
+          <label style="font-weight:bold; color:#4a148c;">每行一筆：時間=劑量U</label>
+          <textarea id="set_long_insulin" rows="3" placeholder="07:00=12"></textarea>
+          <h3 style="margin-top: 15px; color: #6a1b9a; border-top:1px solid #ce93d8; padding-top:15px;">💉 短效型胰島素</h3>
+          <label style="font-weight:bold; color:#4a148c;">每行一筆：血糖低-高=劑量U，最高可用 401-=送醫院</label>
+          <textarea id="set_short_insulin" rows="6" placeholder="0-200=0&#10;201-250=4&#10;251-300=8&#10;301-350=8&#10;351-400=10&#10;401-=送醫院"></textarea>
+          <button style="background-color: #8e24aa; padding: 10px;" onclick="saveInsulinSettingsAdmin()">💾 儲存胰島素設定</button>
+        </div>
+      </div>
+
+      <div id="adminTab2" class="hidden" style="text-align: left;">
+        <p style="font-size: 14px; color: #d32f2f; font-weight: bold; margin-top:0;">⚠️ 設定請以「逗號 ,」分隔。</p>
+        <label style="font-weight:bold; color:#1565c0;">🆘 PRN 藥物選項：</label><input type="text" id="set_prnmeds">
+        <label style="font-weight:bold; color:#00838f; display:block; margin-top:15px; border-top:1px solid #ccc; padding-top:15px;">⚖️ 測量體重星期 (0=日,1=一...)：</label><input type="text" id="set_weightdays" placeholder="例: 0,1,3,5">
+        <label style="font-weight:bold; color:#00838f; display:block; margin-top:10px;">⚖️ 測量體重時段：</label><input type="text" id="set_weighttime" placeholder="例: 08:00">
+        <label style="font-weight:bold; color:#1565c0; display:block; margin-top:15px; border-top:1px solid #ccc; padding-top:15px;">🩸 血糖測量時段：</label><input type="text" id="set_sugartimes">
+        <label style="font-weight:bold; color:#1565c0; display:block; margin-top:10px;">🩺 血壓測量時段：</label><input type="text" id="set_bptimes">
+        <label style="font-weight:bold; color:#1565c0; display:block; margin-top:10px;">🚽 尿液顏色選項：</label><input type="text" id="set_urinecolors">
+        <label style="font-weight:bold; color:#1565c0; display:block; margin-top:10px;">💩 大便顏色選項：</label><input type="text" id="set_stoolcolors">
+        <label style="font-weight:bold; color:#1565c0; display:block; margin-top:10px;">💪 運動訓練選項：</label><input type="text" id="set_exercises">
+        <button style="background-color: #4CAF50; margin-top: 20px;" onclick="saveSettingsAdmin()">💾 儲存所有設定</button>
+      </div>
+
+      <div id="adminTab3" class="hidden">
+        <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; text-align: left; border: 1px solid #90caf9;">
+          <h3 style="margin-top: 0; color: #1565c0;">👩‍⚕️ 照護者名單管理</h3>
+          <table><thead><tr><th>代號</th><th>姓名</th><th>狀態</th></tr></thead><tbody id="adminNurseList"></tbody></table>
+          <hr style="border: 0; border-top: 1px dashed #90caf9; margin: 15px 0;">
+          <div style="display: flex; gap: 10px;"><input type="text" id="newNId" placeholder="代號" style="margin:0; padding:10px;"><input type="text" id="newNName" placeholder="姓名" style="margin:0; padding:10px;"></div>
+          <button style="background-color: #1976d2; padding: 10px;" onclick="addNurse()">➕ 新增照護者</button>
+        </div>
+      </div>
+      <button class="btn-danger" style="margin-top: 20px;" onclick="showView('loginView')">登出後台返回首頁</button>
+    </div>
+
+    <div id="dashboardView" class="hidden">
+      <div id="topBar">
+        <div><div style="font-size: 16px; opacity: 0.9;">📅 <span id="disp_date"></span></div><div style="font-weight: bold; font-size: 20px; margin-top: 5px;">👤 <span id="disp_nurse"></span></div></div>
+        <button onclick="logout()" style="width: auto; background: white; color: #1976d2; padding: 8px 15px; margin: 0; font-size: 16px; border-radius: 20px;">登出 / Keluar</button>
+      </div>
+
+      <div style="padding: 15px; max-width: 600px; margin: 0 auto; padding-bottom: 90px;">
+        <div id="workerTab1"><div id="taskContainer"><p style="text-align: center; color: #888;">載入中 / Memuat data...</p></div></div>
+
+        <div id="workerTab2" class="hidden">
+          <div class="task-card" style="border: 2px solid #fbc02d;">
+            <div class="task-header bg-urine"><span>🚽 尿尿紀錄</span><span class="id-text">Catatan BAK (Kencing)</span></div>
+            <div style="padding: 15px; text-align: left;">
+              <h4 style="color:#f9a825; margin-top:0;">📝 第 <span id="nextUrineSeq">1</span> 次紀錄 (Catatan ke)</h4>
+              <label style="font-weight:bold; color:#555; font-size:16px;">尿液顏色 (Warna Kencing)：</label>
+              <select id="ur_color" style="margin-bottom: 15px;"></select>
+              <button class="btn-save" style="background-color: #fbc02d; width: 100%; color:#000;" onclick="submitUrine()">💾 儲存紀錄 (Simpan)</button>
+              <h4 style="margin-top:20px; margin-bottom:5px; color:#555;">📋 今日紀錄 (Hari ini)</h4>
+              <div id="urineLogsToday" style="font-size: 15px;"></div>
+            </div>
+          </div>
+          <div class="task-card" style="border: 2px solid #795548;">
+            <div class="task-header bg-stool"><span>💩 大便紀錄</span><span class="id-text">Catatan BAB (Berak)</span></div>
+            <div style="padding: 15px; text-align: left;">
+              <h4 style="color:#6d4c41; margin-top:0;">📝 第 <span id="nextStoolSeq">1</span> 次紀錄 (Catatan ke)</h4>
+              <label style="font-weight:bold; color:#555; font-size:16px;">軟硬度 (Tekstur)：</label>
+              <select id="st_texture" style="margin-bottom: 10px;"><option value="正常(Normal)">正常 (Normal)</option><option value="軟(Lembek)">軟 (Lembek)</option><option value="硬(Keras)">硬 (Keras)</option><option value="水狀(Cair)">水狀 (Cair)</option></select>
+              <label style="font-weight:bold; color:#555; font-size:16px;">大便顏色 (Warna Berak)：</label>
+              <select id="st_color" style="margin-bottom: 15px;"></select>
+              <button class="btn-save" style="background-color: #795548; width: 100%;" onclick="submitStool()">💾 儲存紀錄 (Simpan)</button>
+              <h4 style="margin-top:20px; margin-bottom:5px; color:#555;">📋 今日紀錄 (Hari ini)</h4>
+              <div id="stoolLogsToday" style="font-size: 15px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="workerTab3" class="hidden">
+          <div class="task-card" style="border: 2px solid #0288d1;">
+            <div class="task-header bg-breath"><span>🫁 自主呼吸訓練</span><span class="id-text">Latihan Napas (SBT)</span></div>
+            <div style="padding: 15px; text-align: left;" id="breathContainer"></div>
+            <div style="padding: 0 15px 15px 15px;"><h4 style="margin: 0 0 10px 0; color: #0288d1;">📋 今日呼吸紀錄</h4><div id="breathLogsToday" style="font-size: 15px;"></div></div>
+          </div>
+          <div class="task-card" style="border: 2px solid #ff9800;">
+            <div class="task-header bg-exc"><span>💪 復健運動訓練</span><span class="id-text">Latihan Fisik</span></div>
+            <div style="padding: 15px; text-align: left;" id="exerciseContainer"></div>
+            <div style="padding: 0 15px 15px 15px;"><h4 style="margin: 0 0 10px 0; color: #f57c00;">📋 今日運動紀錄</h4><div id="exerciseLogsToday" style="font-size: 15px;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bottomNavWorker" class="navbar hidden">
+      <div class="nav-item active" id="navW1" onclick="switchWorkerTab(1)"><span class="nav-icon">📋</span><span>任務 / Tugas</span></div>
+      <div class="nav-item" id="navW2" onclick="switchWorkerTab(2)"><span class="nav-icon">🚽</span><span>排泄 / BAB</span></div>
+      <div class="nav-item" id="navW3" onclick="switchWorkerTab(3)"><span class="nav-icon">💪</span><span>訓練 / Latihan</span></div>
+    </div>
+
+    <script>
+      let currentNurse = ''; let sysSettings = {}; let globalData = null;
+      const dayNames = ['日(Mg/Sun)', '一(Sn/Mon)', '二(Sl/Tue)', '三(Rb/Wed)', '四(Km/Thu)', '五(Jm/Fri)', '六(Sb/Sat)'];
+      const MED_TIMES = ['07:30', '12:30', '18:30', '21:00'];
+      
+      let weightChartInst = null; let bpChartInst = null; let sugarChartInst = null;
+
+      function showView(viewId) {
+        document.getElementById('loginView').classList.add('hidden'); document.getElementById('adminLoginView').classList.add('hidden');
+        document.getElementById('adminPanelView').classList.add('hidden'); document.getElementById('dashboardView').classList.add('hidden');
+        document.getElementById('reportView').classList.add('hidden'); document.getElementById('bottomNavWorker').classList.add('hidden');
+        document.getElementById(viewId).classList.remove('hidden');
+        if(viewId === 'dashboardView') document.getElementById('bottomNavWorker').classList.remove('hidden');
+      }
+
+      function switchAdminTab(tab) {
+        document.getElementById('adminTab1').classList.add('hidden'); document.getElementById('adminTab2').classList.add('hidden'); document.getElementById('adminTab3').classList.add('hidden');
+        document.getElementById('tabBtnA1').classList.remove('active'); document.getElementById('tabBtnA2').classList.remove('active'); document.getElementById('tabBtnA3').classList.remove('active');
+        document.getElementById('adminTab'+tab).classList.remove('hidden'); document.getElementById('tabBtnA'+tab).classList.add('active');
+      }
+
+      function switchWorkerTab(tab) {
+        document.getElementById('workerTab1').classList.add('hidden'); document.getElementById('workerTab2').classList.add('hidden'); document.getElementById('workerTab3').classList.add('hidden');
+        document.getElementById('navW1').classList.remove('active'); document.getElementById('navW2').classList.remove('active'); document.getElementById('navW3').classList.remove('active');
+        document.getElementById('workerTab'+tab).classList.remove('hidden'); document.getElementById('navW'+tab).classList.add('active');
+        if(tab === 2) renderExcretionUI();
+        if(tab === 3) { renderBreathingUI(); renderExerciseUI(); }
+      }
+
+      function initApp() {
+        google.script.run.withSuccessHandler(list => {
+          const select = document.getElementById('nurseSelect'); select.innerHTML = '<option value="">-- 請選擇 / Pilih --</option>';
+          list.forEach(n => select.innerHTML += `<option value="${n.name}">${n.name}</option>`);
+        }).getActiveCaregivers();
+      }
+
+      function adminLogin() {
+        const acc = document.getElementById('adminAcc').value; const pwd = document.getElementById('adminPwd').value;
+        google.script.run.withSuccessHandler(isValid => {
+          if(isValid) { document.getElementById('adminLoginMsg').innerText = ''; showView('adminPanelView'); loadAdminData(); } 
+          else document.getElementById('adminLoginMsg').innerText = '帳號或密碼錯誤！ / Akun atau kata sandi salah!';
+        }).verifyLogin(acc, pwd);
+      }
+      function loadAdminData() {
+        google.script.run.withSuccessHandler(list => {
+          const tbody = document.getElementById('adminNurseList'); tbody.innerHTML = '';
+          list.forEach(n => {
+            let btnClass = (n.status !== 'Inactive') ? 'btn-active' : 'btn-inactive'; let text = (n.status !== 'Inactive') ? '🟢 啟用' : '🔴 停用';
+            tbody.innerHTML += `<tr><td>${n.id}</td><td>${n.name}</td><td><button class="status-btn ${btnClass}" onclick="toggleNurse('${n.id}')">${text}</button></td></tr>`;
+          });
+        }).getAllCaregiversAdmin();
+        google.script.run.withSuccessHandler(matrix => {
+          const tbody = document.getElementById('medMatrixBody'); tbody.innerHTML = '';
+          for(let i=0; i<7; i++) {
+            let rowHtml = `<tr><td>${dayNames[i]}</td>`;
+            for(let j=0; j<4; j++) rowHtml += `<td><input type="number" step="0.5" class="med-input-cell" id="mat_${i}_${j}" value="${matrix[i][j]}"></td>`;
+            rowHtml += `</tr>`; tbody.innerHTML += rowHtml;
+          }
+        }).getMedSettingsAdmin();
+        google.script.run.withSuccessHandler(settings => {
+          document.getElementById('set_long_insulin').value = settings.LongInsulinPlan || '07:00=12';
+          document.getElementById('set_short_insulin').value = settings.ShortInsulinScale || '0-200=0\n201-250=4\n251-300=8\n301-350=8\n351-400=10\n401-=送醫院';
+          document.getElementById('set_sugartimes').value = settings.SugarTimes || ''; document.getElementById('set_bptimes').value = settings.BPTimes || '';
+          document.getElementById('set_urinecolors').value = settings.UrineColors || ''; document.getElementById('set_stoolcolors').value = settings.StoolColors || '';
+          document.getElementById('set_exercises').value = settings.ExerciseTypes || ''; document.getElementById('set_prnmeds').value = settings.PRNMedList || ''; 
+          document.getElementById('set_weightdays').value = settings.WeightDays || '0,1,3,5'; document.getElementById('set_weighttime').value = settings.WeightTime || '08:00';
+        }).getSystemSettings();
+        loadExtraMedsAdmin();
+      }
+      function saveSettingsAdmin() {
+        const obj = {
+          LongInsulinPlan: document.getElementById('set_long_insulin').value, ShortInsulinScale: document.getElementById('set_short_insulin').value,
+          SugarTimes: document.getElementById('set_sugartimes').value, BPTimes: document.getElementById('set_bptimes').value,
+          UrineColors: document.getElementById('set_urinecolors').value, StoolColors: document.getElementById('set_stoolcolors').value,
+          ExerciseTypes: document.getElementById('set_exercises').value, PRNMedList: document.getElementById('set_prnmeds').value,
+          WeightDays: document.getElementById('set_weightdays').value, WeightTime: document.getElementById('set_weighttime').value
+        };
+        google.script.run.withSuccessHandler(res => alert(res.message)).saveSystemSettingsAdmin(obj);
+      }
+      function saveInsulinSettingsAdmin() { saveSettingsAdmin(); }
+      function saveMedMatrix() {
+        let matrix = [];
+        for(let i=0; i<7; i++) { let row = []; for(let j=0; j<4; j++) row.push(parseFloat(document.getElementById(`mat_${i}_${j}`).value) || 0); matrix.push(row); }
+        google.script.run.withSuccessHandler(res => alert(res.message)).saveMedSettingsAdmin(matrix);
+      }
+      function loadExtraMedsAdmin() {
+        google.script.run.withSuccessHandler(list => {
+          const div = document.getElementById('extraMedsListLog'); div.innerHTML = '';
+          if(list.length===0) div.innerHTML = '<p style="color:#999;font-size:14px;margin:0;">無額外藥物</p>';
+          list.forEach(m => {
+            let dayText = m.day === 'All' ? '每天' : dayNames[m.day];
+            div.innerHTML += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ffd180; padding:8px 0; align-items:center;"><span><span style="background:#ffe0b2;color:#e65100;font-size:12px;padding:2px 4px;border-radius:4px;">${dayText}</span> [${m.time}] <b>${m.name}</b></span><button onclick="removeExtraMed(${m.rowIdx})" style="padding:4px 10px; width:auto; background:#e53935; font-size:13px; margin:0;">刪除</button></div>`;
+          });
+        }).getExtraMedsAdmin();
+      }
+      function addExtraMed() {
+        const name = document.getElementById('exName').value.trim(); const day = document.getElementById('exDay').value; const time = document.getElementById('exTime').value;
+        if(!name) return alert('請輸入藥名！'); google.script.run.withSuccessHandler(res => { document.getElementById('exName').value=''; loadExtraMedsAdmin(); alert(res.message); }).addExtraMedAdmin(name, day, time);
+      }
+      function removeExtraMed(idx) { if(!confirm('確定刪除？')) return; google.script.run.withSuccessHandler(res => loadExtraMedsAdmin()).removeExtraMedAdmin(idx); }
+      function toggleNurse(id) { google.script.run.withSuccessHandler(() => { loadAdminData(); initApp(); }).toggleCaregiverStatus(id); }
+      function addNurse() {
+        const id = document.getElementById('newNId').value.trim(); const name = document.getElementById('newNName').value.trim();
+        if(!id || !name) return; google.script.run.withSuccessHandler(res => { document.getElementById('newNId').value=''; document.getElementById('newNName').value=''; loadAdminData(); initApp(); alert(res.message); }).addCaregiver(id, name);
+      }
+
+      function login() {
+        const select = document.getElementById('nurseSelect'); const nurseName = select.value;
+        if (!nurseName) return alert('請先選擇名字！\nSilakan pilih nama Anda dulu!');
+        currentNurse = nurseName;
+        const now = new Date(); document.getElementById('disp_date').innerText = now.getFullYear() + '/' + (now.getMonth() + 1) + '/' + now.getDate(); document.getElementById('disp_nurse').innerText = currentNurse;
+        showView('dashboardView'); switchWorkerTab(1); loadDashboardData();
+      }
+      function logout() { if(!confirm('確定要登出嗎？\nYakin ingin keluar?')) return; currentNurse = ''; showView('loginView'); document.getElementById('nurseSelect').value = ''; }
+
+      function loadDashboardData() {
+        const container = document.getElementById('taskContainer'); container.innerHTML = '<p style="text-align: center; color: #888;">載入中 / Memuat data...</p>';
+        google.script.run.withSuccessHandler(function(data) {
+          globalData = data; sysSettings = data.settings;
+          renderTasksUI();
+          if(document.getElementById('navW2').classList.contains('active')) renderExcretionUI();
+          if(document.getElementById('navW3').classList.contains('active')) { renderBreathingUI(); renderExerciseUI(); }
+        }).getDashboardData();
+      }
+
+      function renderTasksUI() {
+        const container = document.getElementById('taskContainer'); container.innerHTML = '';
+        const logs = globalData.logs;
+        let DYN_TASKS = [];
+
+        const weightDays = sysSettings.WeightDays ? sysSettings.WeightDays.split(',') : ['0','1','3','5'];
+        const todayDay = new Date().getDay().toString(); 
+        if (weightDays.includes(todayDay)) {
+          const wTime = sysSettings.WeightTime || '08:00';
+          const lastW = globalData.lastWeight ? globalData.lastWeight.val : '無';
+          DYN_TASKS.push({ category: '體重', headerClass: 'bg-weight', titleTw: `⚖️ 測量體重 (上次: ${lastW}kg)`, titleId: 'Timbang Badan', type: 'single', placeholder: '公斤 (kg)', times: [wTime] });
+        }
+
+        let medsHtml = `<div class="task-card"><div class="task-header bg-meds"><span>💊 口服常規藥物</span><span class="id-text">Obat Minum Rutin</span></div>`;
+        let hasMedsToday = false;
+        MED_TIMES.forEach(time => {
+          const pillCount = parseFloat(globalData.todayPills[time]) || 0; const extras = globalData.todayExtra[time] || [];
+          if (pillCount > 0 || extras.length > 0) {
+             hasMedsToday = true; let descTw = []; let descId = [];
+             if(pillCount > 0) { descTw.push(`常規 ${pillCount} 顆`); descId.push(`Rutin ${pillCount} butir`); }
+             if(extras.length > 0) { descTw.push(`額外: ${extras.join(', ')}`); descId.push(`Ekstra: ${extras.join(', ')}`); }
+             const existingLog = logs.find(l => l.category === '口服藥物' && String(l.scheduledTime) === time);
+             let actionHtml = existingLog ? `<div class="log-done"><strong>✅ 完成 / Selesai</strong><div class="log-done-sub">${existingLog.time} / ${existingLog.caregiver}</div></div>` : `<button class="btn-check" onclick="saveLog('口服藥物', '${time}', 'check', null, null)">👉 點擊打卡 (Tekan)</button>`;
+             medsHtml += `<div class="time-row" style="align-items: flex-start;"><div class="time-label">${time}</div><div style="flex:1; padding-left:10px;"><div style="font-size:16px; color:#c62828; font-weight:bold; margin-bottom:5px;">${descId.join(' + ')}<br><span style="font-size:14px; color:#666; font-weight:normal;">(${descTw.join(' + ')})</span></div><div style="text-align:right;">${actionHtml}</div></div></div>`;
+          }
+        });
+        if (hasMedsToday) container.innerHTML += medsHtml + '</div>';
+
+        const prnLogs = logs.filter(l => l.category === 'PRN藥物'); let prnLogsHtml = '';
+        if(prnLogs.length > 0) { prnLogsHtml = '<div style="margin-bottom:15px; border-left: 3px solid #d81b60; padding-left: 10px;">'; prnLogs.forEach(l => prnLogsHtml += `<div style="font-size:15px; color:#d81b60;">✅ [${l.time}] 給藥: ${l.value} <span style="color:#888;font-size:13px;">(${l.caregiver})</span></div>`); prnLogsHtml += '</div>'; }
+        const prnOptions = sysSettings.PRNMedList ? sysSettings.PRNMedList.split(',') : ['安眠藥(Obat Tidur)', '止痛藥(Obat Nyeri)'];
+        let prnSelect = '<select id="prn_name" style="border-color:#f48fb1;"><option value="">-- 選擇藥物 (Pilih Obat) --</option>';
+        prnOptions.forEach(o => prnSelect += `<option value="${o}">${o}</option>`); prnSelect += '</select>';
+        container.innerHTML += `<div class="task-card" style="border: 2px dashed #d81b60;"><div class="task-header bg-prn"><span>🆘 需要時才吃 (PRN)</span><span class="id-text">Obat PRN (Jika Perlu)</span></div><div style="padding: 15px;">${prnLogsHtml}<label style="font-weight:bold; color:#d81b60; font-size:16px;">選擇藥物 (Pilih Nama Obat)：</label>${prnSelect}<button class="btn-check" style="width: 100%; margin-top: 10px; background-color: #d81b60;" onclick="savePrnLog()">👉 點擊紀錄給藥 (Catat)</button></div></div>`;
+
+        const sugarTimes = sysSettings.SugarTimes ? sysSettings.SugarTimes.split(',') : ['04:00', '07:00', '09:30', '12:00', '15:00', '18:00', '21:00', '23:40'];
+        const bpTimes = sysSettings.BPTimes ? sysSettings.BPTimes.split(',') : ['04:00', '07:00', '12:00', '15:00', '18:00', '21:00', '23:40'];
+        const longInsulin = parseLongInsulinPlan(sysSettings.LongInsulinPlan || '07:00=12');
+        DYN_TASKS.push({ category: '血糖', headerClass: 'bg-sugar', titleTw: '🩸 測量血糖', titleId: 'Cek Gula Darah', type: 'single', placeholder: '數值 (Angka)', times: sugarTimes });
+        DYN_TASKS.push({ category: '支氣管擴張劑', headerClass: 'bg-inhaler', titleTw: '💨 支氣管擴張劑', titleId: 'Obat Inhaler (Semprot)', type: 'check', times: ['07:00', '15:00', '23:00'] });
+        DYN_TASKS.push({ category: '語言訓練', headerClass: 'bg-language', titleTw: '🗣️ 語言訓練', titleId: 'Latihan Bicara', type: 'check', times: ['09:00', '15:30'] });
+        DYN_TASKS.push({ category: '血壓', headerClass: 'bg-bp', titleTw: '🩺 測量血壓', titleId: 'Cek Tensi Darah', type: 'double', times: bpTimes });
+        DYN_TASKS.push({ category: '長效型胰島素', headerClass: 'bg-insulin', titleTw: '💉 長效型胰島素', titleId: 'Insulin Kerja Panjang', type: 'insulin', times: longInsulin.map(i => i.time), doses: longInsulin });
+
+        DYN_TASKS.forEach(task => {
+          let cardHtml = `<div class="task-card"><div class="task-header ${task.headerClass}"><span>${task.titleTw}</span><span class="id-text">${task.titleId}</span></div>`;
+          task.times.forEach((time) => {
+            const existingLog = logs.find(l => l.category === task.category && String(l.scheduledTime) === time);
+            let timeLabelDisplay = time; let targetDose = '';
+            if (task.type === 'insulin') targetDose = ((task.doses || []).find(i => i.time === time) || {}).dose || '';
+            
+            let actionHtml = '';
+            if (existingLog) {
+              let valDisplay = existingLog.value === '完成' ? '完成 / Selesai' : existingLog.value;
+              if (task.type === 'insulin') valDisplay = `已打 ${existingLog.value}`; 
+              actionHtml = `<div class="log-done"><strong>✅ ${valDisplay}</strong><div class="log-done-sub">${existingLog.time} / ${existingLog.caregiver}</div></div>`;
+            } else {
+              const idBase = `input_${task.category}_${time.replace(':','')}`;
+              if (task.type === 'single') actionHtml = `<input type="number" id="${idBase}" placeholder="${task.placeholder}"><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 5px; width: 100%;">💾 儲存 / Simpan</button>`;
+              else if (task.type === 'double') actionHtml = `<div class="double-input"><div style="flex: 1; text-align: center;"><div style="font-size: 14px; color: #fb8c00; font-weight: bold; margin-bottom: 5px;">高 / Atas</div><input type="number" id="${idBase}_high" placeholder="例: 120" style="margin: 0;"></div><span>/</span><div style="flex: 1; text-align: center;"><div style="font-size: 14px; color: #fb8c00; font-weight: bold; margin-bottom: 5px;">低 / Bawah</div><input type="number" id="${idBase}_low" placeholder="例: 80" style="margin: 0;"></div></div><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 10px; width: 100%;">💾 儲存 / Simpan</button>`;
+              else if (task.type === 'check') actionHtml = `<button class="btn-check" onclick="saveLog('${task.category}', '${time}', '${task.type}', null, '${targetDose}')">👉 點擊打卡 (Tekan)</button>`;
+              else if (task.type === 'insulin') actionHtml = `<input type="number" id="${idBase}" value="${targetDose || ''}" placeholder="輸入單位 (unit)" step="0.5"><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 5px; width: 100%; background-color:#8e24aa;">💾 儲存胰島素 / Simpan Insulin</button>`;
+            }
+            cardHtml += `<div class="time-row"><div class="time-label" style="${task.category === '胰島素' ? 'line-height: 1.2;' : ''}">${timeLabelDisplay}</div><div class="time-action">${actionHtml}</div></div>`;
+          });
+          cardHtml += `</div>`; container.innerHTML += cardHtml;
+        });
+      }
+
+      function parseLongInsulinPlan(text) {
+        return String(text || '').split(/\n|,/).map(line => {
+          const parts = line.split('=');
+          return parts.length === 2 ? { time: parts[0].trim(), dose: parts[1].replace(/[uU]/g, '').trim() } : null;
+        }).filter(x => x && x.time && x.dose);
+      }
+      function shortInsulinAdvice(value) {
+        const sugar = parseFloat(value);
+        const rules = String(sysSettings.ShortInsulinScale || '0-200=0\n201-250=4\n251-300=8\n301-350=8\n351-400=10\n401-=送醫院').split(/\n|,/);
+        for (const rule of rules) {
+          const parts = rule.split('='), range = (parts[0] || '').split('-');
+          if (parts.length !== 2) continue;
+          const low = parseFloat(range[0] || '-Infinity'), high = range[1] === '' ? Infinity : parseFloat(range[1]);
+          if (sugar >= low && sugar <= high) return parts[1].trim();
+        }
+        return '';
+      }
+
+      function saveLog(category, scheduledTime, type, idBase, targetDose) {
+        let value = '';
+        if (type === 'single') { const el = document.getElementById(idBase); if (!el.value) { alert('請輸入數值！\nHarap isi angka!'); return; } value = el.value; } 
+        else if (type === 'double') { const high = document.getElementById(idBase + '_high').value; const low = document.getElementById(idBase + '_low').value; if (!high || !low) { alert('請輸入完整血壓！\nHarap isi tensi lengkap!'); return; } value = high + '/' + low; } 
+        else if (type === 'check') { if (category === '胰島素') value = targetDose + 'u'; else value = '完成'; }
+        else if (type === 'insulin') { const el = document.getElementById(idBase); if (!el.value) { alert('請輸入胰島素單位！\nHarap isi unit insulin!'); return; } value = el.value + 'u'; }
+        const advice = category === '血糖' ? shortInsulinAdvice(value) : '';
+        const note = advice ? `\n\n短效型胰島素建議：${advice === '0' ? '不打' : advice}` : '';
+        if(!confirm(`確定儲存？\nYakin ingin menyimpan?\n\n[ ${scheduledTime} - ${category} : ${value} ]${note}`)) return;
+        const btn = event.target; btn.innerText = '儲存中 / Menyimpan...'; btn.disabled = true;
+        google.script.run.withSuccessHandler(res => loadDashboardData()).addLog(currentNurse, category, scheduledTime, value);
+      }
+      function savePrnLog() {
+        const name = document.getElementById('prn_name').value; 
+        if(!name) return alert('請選擇藥物！\nHarap pilih obat!');
+        if(!confirm(`確定現在給予「${name}」嗎？\nYakin obat ini sudah diminum?`)) return;
+        const btn = event.target; btn.innerText = '儲存中 / Menyimpan...'; btn.disabled = true;
+        google.script.run.withSuccessHandler(res => loadDashboardData()).addLog(currentNurse, 'PRN藥物', 'PRN', name);
+      }
+
+      function renderExcretionUI() {
+        const exc = globalData.excretion; document.getElementById('nextUrineSeq').innerText = exc.nextUrineSeq; document.getElementById('nextStoolSeq').innerText = exc.nextStoolSeq;
+        const uColors = sysSettings.UrineColors ? sysSettings.UrineColors.split(',') : ['淡黃', '深黃', '血色']; const sColors = sysSettings.StoolColors ? sysSettings.StoolColors.split(',') : ['褐色', '黑色', '紅色'];
+        let uHtml = ''; uColors.forEach(c => uHtml += `<option value="${c}">${c}</option>`); document.getElementById('ur_color').innerHTML = uHtml;
+        let sHtml = ''; sColors.forEach(c => sHtml += `<option value="${c}">${c}</option>`); document.getElementById('st_color').innerHTML = sHtml;
+        let uLogs = ''; let sLogs = '';
+        if(exc.logs.length === 0) { uLogs = '<p style="color:#999;">無 / Kosong</p>'; sLogs = '<p style="color:#999;">無 / Kosong</p>'; }
+        exc.logs.forEach(l => {
+          let str = `<div style="border-bottom:1px solid #eee; padding:5px 0;">[${l.time}] 第${l.seq}次 - ${l.color} <span style="font-size:12px;color:#888;">(${l.nurse})</span></div>`;
+          if(l.type === '尿尿 (BAK)') uLogs += str;
+          if(l.type === '大便 (BAB)') sLogs += `<div style="border-bottom:1px solid #eee; padding:5px 0;">[${l.time}] 第${l.seq}次 - ${l.texture}, ${l.color} <span style="font-size:12px;color:#888;">(${l.nurse})</span></div>`;
+        });
+        document.getElementById('urineLogsToday').innerHTML = uLogs || '<p style="color:#999;">無 / Kosong</p>'; document.getElementById('stoolLogsToday').innerHTML = sLogs || '<p style="color:#999;">無 / Kosong</p>';
+      }
+      function submitUrine() {
+        const color = document.getElementById('ur_color').value; const seq = document.getElementById('nextUrineSeq').innerText;
+        if(!confirm('確定儲存尿尿紀錄？\nYakin simpan catatan BAK?')) return;
+        event.target.disabled = true; event.target.innerText = '儲存中 / Menyimpan...'; google.script.run.withSuccessHandler(res => loadDashboardData()).addExcretionLog(currentNurse, '尿尿 (BAK)', seq, color, '');
+      }
+      function submitStool() {
+        const color = document.getElementById('st_color').value; const texture = document.getElementById('st_texture').value; const seq = document.getElementById('nextStoolSeq').innerText;
+        if(!confirm('確定儲存大便紀錄？\nYakin simpan catatan BAB?')) return;
+        event.target.disabled = true; event.target.innerText = '儲存中 / Menyimpan...'; google.script.run.withSuccessHandler(res => loadDashboardData()).addExcretionLog(currentNurse, '大便 (BAB)', seq, color, texture);
+      }
+
+      let activeBreathRow = null; let activeBreathStart = null; let activeExcRow = null; let activeExcStart = null;
+
+      function renderBreathingUI() {
+        const status = globalData.breathing; const container = document.getElementById('breathContainer'); const logDiv = document.getElementById('breathLogsToday');
+        logDiv.innerHTML = '';
+        if(status.logs.length === 0) { logDiv.innerHTML = '<p style="color:#999; font-size:14px; text-align:center;">今日尚無紀錄 (Belum ada catatan)</p>'; }
+        else { status.logs.forEach(l => { logDiv.innerHTML += `<div style="border-bottom:1px solid #eee; padding:8px 0;">第 ${l.seq} 次 (Ke-${l.seq}): <strong style="color:#0288d1;">${l.startTime} ~ ${l.endTime}</strong> <span style="background:#e1f5fe; color:#0277bd; padding:2px 6px; border-radius:10px; font-size:13px;">共 ${l.duration} 分鐘 (menit)</span></div>`; }); }
+
+        if (status.active) {
+          activeBreathRow = status.active.rowIdx; activeBreathStart = status.active.startTime;
+          container.innerHTML = `
+            <div style="background: #e1f5fe; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 2px solid #0288d1;">
+              <div style="font-size: 16px; color: #0277bd; font-weight: bold; margin-bottom: 5px;">第 ${status.active.seq} 次訓練中 (Sedang Latihan)</div>
+              <div style="font-size: 24px; color: #01579b; font-weight: bold;">開始 (Mulai): ${activeBreathStart}</div>
+            </div>
+            <h4 style="color:#0288d1; margin-bottom: 10px;">📝 結束時請填寫 (Isi saat selesai)</h4>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;"><div style="flex: 1;"><label style="font-size:14px; color:#555; font-weight:bold;">血氧 SpO2 (%)</label><input type="number" id="br_spo2" placeholder="例: 98"></div><div style="flex: 1;"><label style="font-size:14px; color:#555; font-weight:bold;">心跳 / Nadi (bpm)</label><input type="number" id="br_hr" placeholder="例: 80"></div></div>
+            <label style="font-size:14px; color:#555; font-weight:bold; margin-bottom: 5px; display: block; text-align: left;">血壓 / Tensi (mmHg)</label>
+            <div class="double-input" style="margin-bottom: 10px; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #ddd;"><div style="flex: 1; text-align: center;"><div style="font-size: 14px; color: #0288d1; font-weight: bold; margin-bottom: 5px;">高 / Atas</div><input type="number" id="br_bp_high" placeholder="例: 120" style="margin: 0;"></div><span>/</span><div style="flex: 1; text-align: center;"><div style="font-size: 14px; color: #0288d1; font-weight: bold; margin-bottom: 5px;">低 / Bawah</div><input type="number" id="br_bp_low" placeholder="例: 80" style="margin: 0;"></div></div>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;"><div style="flex: 1;"><label style="font-size:14px; color:#555; font-weight:bold;">呼吸速率 / Napas</label><input type="number" id="br_rr" placeholder="例: 20"></div></div>
+            <label style="font-size:14px; color:#555; font-weight:bold;">呼吸型態 (Pola Napas)</label>
+            <select id="br_pattern" style="margin-bottom: 10px;"><option value="平穩 (Tenang)">平穩 (Tenang)</option><option value="急促 (Cepat)">急促 (Cepat)</option><option value="費力 (Sesak)">費力 (Sesak)</option><option value="不規則 (Tidak teratur)">不規則 (Tidak teratur)</option></select>
+            <label style="font-size:14px; color:#555; font-weight:bold;">提早接回原因 (Alasan kembali)</label>
+            <select id="br_reason" style="margin-bottom: 10px;"><option value="無/順利完成">無/順利完成 (Selesai)</option><option value="血氧下降">血氧下降 (Oksigen turun)</option><option value="心跳異常">心跳異常 (Nadi tdk normal)</option><option value="太喘/費力">太喘/費力 (Terlalu sesak)</option><option value="其他">其他 (Lainnya)</option></select>
+            <label style="font-size:14px; color:#555; font-weight:bold;">備註 (Catatan)</label><input type="text" id="br_note" placeholder="選填 (Opsional)">
+            <button class="btn-danger" style="margin-top: 15px; background-color: #0288d1;" onclick="endBreath()">🛑 結束訓練並儲存 (Selesai)</button>
+          `;
+        } else {
+          container.innerHTML = `<div style="text-align: center; padding: 20px 0;"><div style="font-size: 60px; margin-bottom: 10px;">🫁</div><button class="btn-primary" style="font-size: 20px; padding: 15px; background-color: #0288d1; border-radius: 50px;" onclick="startBreath()">▶️ 開始呼吸訓練 (Mulai)</button></div>`;
+        }
+      }
+
+      function renderExerciseUI() {
+        const status = globalData.exercise; const container = document.getElementById('exerciseContainer'); const logDiv = document.getElementById('exerciseLogsToday');
+        logDiv.innerHTML = '';
+        if(status.logs.length === 0) { logDiv.innerHTML = '<p style="color:#999; font-size:14px; text-align:center;">今日尚無紀錄 (Belum ada catatan)</p>'; }
+        else { status.logs.forEach(l => { logDiv.innerHTML += `<div style="border-bottom:1px solid #eee; padding:8px 0;">第 ${l.seq} 次 [${l.type}]: <strong style="color:#e65100;">${l.startTime} ~ ${l.endTime}</strong> <span style="background:#fff3e0; color:#e65100; padding:2px 6px; border-radius:10px; font-size:13px;">共 ${l.duration} 分鐘 (menit)</span></div>`; }); }
+
+        if (status.active) {
+          activeExcRow = status.active.rowIdx; activeExcStart = status.active.startTime;
+          container.innerHTML = `
+            <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 2px solid #ff9800;">
+              <div style="font-size: 16px; color: #e65100; font-weight: bold; margin-bottom: 5px;">第 ${status.active.seq} 次 [${status.active.type}] 訓練中</div>
+              <div style="font-size: 24px; color: #e65100; font-weight: bold;">開始 (Mulai): ${activeExcStart}</div>
+            </div>
+            <button class="btn-danger" style="margin-top: 15px; background-color: #f57c00;" onclick="endExc()">🛑 結束運動並儲存 (Selesai)</button>
+          `;
+        } else {
+          const excTypes = sysSettings.ExerciseTypes ? sysSettings.ExerciseTypes.split(',') : ['站立(Berdiri)', '走路(Berjalan)'];
+          let excHtml = '<select id="exc_type" style="margin-bottom: 15px;">'; excTypes.forEach(t => excHtml += `<option value="${t}">${t}</option>`); excHtml += '</select>';
+          container.innerHTML = `<div style="text-align: center; padding: 10px 0;"><label style="font-weight:bold; color:#f57c00; display:block; text-align:left;">選擇運動類型 (Pilih Latihan)：</label>${excHtml}<button class="btn-primary" style="font-size: 20px; padding: 15px; background-color: #f57c00; border-radius: 50px;" onclick="startExc()">▶️ 開始運動訓練 (Mulai)</button></div>`;
+        }
+      }
+
+      function startBreath() { if(!confirm('開始呼吸訓練？\nMulai latihan?')) return; event.target.disabled = true; event.target.innerText = '處理中 / Memproses...'; google.script.run.withSuccessHandler(res => loadDashboardData()).startBreathingTraining(currentNurse); }
+      function endBreath() {
+        const bpHigh = document.getElementById('br_bp_high').value.trim(); const bpLow = document.getElementById('br_bp_low').value.trim(); let bp = ''; if (bpHigh && bpLow) bp = bpHigh + '/' + bpLow;
+        const spo2 = document.getElementById('br_spo2').value.trim(); const hr = document.getElementById('br_hr').value.trim(); const rr = document.getElementById('br_rr').value.trim();
+        if(!spo2 || !hr || !rr || !bp) return alert('請填寫完整生命徵象！\nHarap isi Tensi, SpO2, Nadi, Napas!');
+        if(!confirm('結束訓練並儲存？\nSelesai latihan dan simpan?')) return;
+        event.target.disabled = true; event.target.innerText = '儲存中 / Menyimpan...';
+        google.script.run.withSuccessHandler(res => loadDashboardData()).endBreathingTraining(activeBreathRow, activeBreathStart, bp, spo2, hr, rr, document.getElementById('br_pattern').value, document.getElementById('br_reason').value, document.getElementById('br_note').value.trim());
+      }
+      function startExc() { const type = document.getElementById('exc_type').value; if(!confirm(`開始 [${type}] 訓練？\nMulai latihan?`)) return; event.target.disabled = true; event.target.innerText = '處理中 / Memproses...'; google.script.run.withSuccessHandler(res => loadDashboardData()).startExercise(currentNurse, type); }
+      function endExc() { if(!confirm('結束運動並儲存？\nSelesai latihan dan simpan?')) return; event.target.disabled = true; event.target.innerText = '儲存中 / Menyimpan...'; google.script.run.withSuccessHandler(res => loadDashboardData()).endExercise(activeExcRow, activeExcStart); }
+
+      function openReportView() {
+        showView('reportView');
+        const today = new Date(); const yyyy = today.getFullYear(); const mm = String(today.getMonth() + 1).padStart(2, '0'); const dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('reportDateInput').value = `${yyyy}-${mm}-${dd}`;
+        loadReportData();
+      }
+
+      function loadReportData() {
+        const dateStr = document.getElementById('reportDateInput').value;
+        document.getElementById('reportTitleDate').innerText = '資料載入中...';
+        
+        google.script.run.withSuccessHandler(function(data) {
+          document.getElementById('reportTitleDate').innerText = `報告日期：${data.targetDate}`;
+          
+          renderCharts(data);
+
+          let brHtml = '<table class="report-table"><thead><tr><th>時段</th><th>Time</th><th>血壓/血氧/心跳</th><th>呼吸速率/型態</th><th>執行者</th></tr></thead><tbody>';
+          if(data.breathing.length === 0) brHtml += '<tr><td colspan="5">無紀錄</td></tr>';
+          data.breathing.forEach(b => { 
+            let obs = `BP:${b.bp}<br>SpO2:${b.spo2}%<br>HR:${b.hr}`; let pat = `RR:${b.rr}<br>${b.pattern}`;
+            brHtml += `<tr><td>${b.start}~${b.end}</td><td>${b.mins}分鐘</td><td>${obs}</td><td>${pat}</td><td>${b.nurse}</td></tr>`; 
+          });
+          brHtml += '</tbody></table>';
+          document.getElementById('reportBreathDiv').innerHTML = brHtml;
+
+          let exHtml = '<table class="report-table"><thead><tr><th>時段</th><th>類型</th><th>Time</th><th>執行者</th></tr></thead><tbody>';
+          let excSummary = {};
+          if(data.exercise.length === 0) {
+            exHtml += '<tr><td colspan="4">無紀錄</td></tr>';
+            document.getElementById('reportExcSummaryDiv').innerHTML = '今日無復健運動紀錄';
+          } else {
+            data.exercise.forEach(e => { 
+              exHtml += `<tr><td>${e.start}~${e.end}</td><td>${e.type}</td><td>${e.mins}分鐘</td><td>${e.nurse}</td></tr>`; 
+              if(!excSummary[e.type]) excSummary[e.type] = { count: 0, mins: 0 };
+              excSummary[e.type].count += 1;
+              excSummary[e.type].mins += parseInt(e.mins) || 0;
+            });
+            
+            let summaryHtml = '<strong style="display:block; margin-bottom:5px;">📊 運動總結：</strong>';
+            for(let type in excSummary) {
+              summaryHtml += `<div>🔸 ${type}：共 <b>${excSummary[type].count}</b> 次，總計 <b>${excSummary[type].mins}</b> 分鐘</div>`;
+            }
+            document.getElementById('reportExcSummaryDiv').innerHTML = summaryHtml;
+          }
+          exHtml += '</tbody></table>';
+          document.getElementById('reportExcDiv').innerHTML = exHtml;
+
+          let excHtml = '<table class="report-table"><thead><tr><th>時段</th><th>類型</th><th>顏色/質地</th><th>執行者</th></tr></thead><tbody>';
+          if(data.excretion.length === 0) excHtml += '<tr><td colspan="4">無紀錄</td></tr>';
+          data.excretion.forEach(e => { 
+            let detail = e.color; if(e.texture) detail += ` / ${e.texture}`;
+            excHtml += `<tr><td>${e.time}</td><td>${e.type} (第${e.seq}次)</td><td>${detail}</td><td>${e.nurse}</td></tr>`; 
+          });
+          excHtml += '</tbody></table>';
+          document.getElementById('reportExcretionDiv').innerHTML = excHtml;
+
+        }).getReportData(dateStr);
+      }
+
+      function renderCharts(data) {
+        if(weightChartInst) weightChartInst.destroy(); if(bpChartInst) bpChartInst.destroy(); if(sugarChartInst) sugarChartInst.destroy();
+
+        const chartOptions = { 
+          animation: false, 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          layout: {
+            padding: {
+              right: 60,
+              left: 10,
+              bottom: 15
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                maxRotation: 45, 
+                minRotation: 45,
+                align: 'inner'
+              }
+            }
+          },
+          plugins: { title: { display: true, text: '' } } 
+        };
+
+        const ctxW = document.getElementById('weightChart').getContext('2d');
+        chartOptions.plugins.title.text = '體重趨勢 (近7天)';
+        weightChartInst = new Chart(ctxW, {
+          type: 'line', data: { labels: data.weightTrend.map(d => d.x), datasets: [{ label: '體重 (kg)', data: data.weightTrend.map(d => d.y), borderColor: '#00838f', backgroundColor: 'rgba(0,131,143,0.1)', fill: true, tension: 0.1, pointRadius: 5 }] },
+          options: chartOptions
+        });
+
+        const ctxBP = document.getElementById('bpChart').getContext('2d');
+        chartOptions.plugins.title.text = '血壓趨勢 (近7天)';
+        bpChartInst = new Chart(ctxBP, {
+          type: 'line', data: { labels: data.bpTrend.map(d => d.x), datasets: [{ label: '收縮壓 (高)', data: data.bpTrend.map(d => d.high), borderColor: '#d32f2f', backgroundColor: '#d32f2f', tension: 0.1 }, { label: '舒張壓 (低)', data: data.bpTrend.map(d => d.low), borderColor: '#1976d2', backgroundColor: '#1976d2', tension: 0.1 }] },
+          options: chartOptions
+        });
+
+        const ctxS = document.getElementById('sugarChart').getContext('2d');
+        chartOptions.plugins.title.text = '血糖趨勢 (近7天)';
+        sugarChartInst = new Chart(ctxS, {
+          type: 'line', data: { labels: data.sugarTrend.map(d => d.x), datasets: [{ label: '血糖 (mg/dL)', data: data.sugarTrend.map(d => d.y), borderColor: '#f57c00', backgroundColor: 'rgba(245,124,0,0.1)', fill: true, tension: 0.1, pointRadius: 4 }] },
+          options: chartOptions
+        });
+      }
+
+      function downloadPDF() {
+        window.scrollTo(0, 0);
+        const btn = document.getElementById('downloadPdfBtn');
+        const originalText = btn.innerText;
+        btn.innerText = '⏳ 正在產生 PDF...請稍候';
+        btn.disabled = true;
+
+        const element = document.getElementById('pdfCaptureArea');
+        const opt = {
+          margin:       0.3,
+          filename:     '阿婆照護日報_' + document.getElementById('reportDateInput').value + '.pdf',
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        });
+      }
+    </script>
+  </body>
+</html>
