@@ -82,8 +82,8 @@ function getSystemSettings() {
 }
 function saveSystemSettingsAdmin(settingsObj) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Settings'); sheet.clear();
-  sheet.appendRow(['LongInsulinPlan', settingsObj.LongInsulinPlan || '07:00=12']);
-  sheet.appendRow(['ShortInsulinScale', settingsObj.ShortInsulinScale || '0-200=0\n201-250=4\n251-300=8\n301-350=8\n351-400=10\n401-=送醫院']);
+  sheet.appendRow(['LongInsulinPlan', settingsObj.LongInsulinPlan]);
+  sheet.appendRow(['ShortInsulinScale', settingsObj.ShortInsulinScale]);
   sheet.appendRow(['SugarTimes', "'" + settingsObj.SugarTimes]); sheet.appendRow(['BPTimes', "'" + settingsObj.BPTimes]);
   sheet.appendRow(['UrineColors', settingsObj.UrineColors]); sheet.appendRow(['StoolColors', settingsObj.StoolColors]);
   sheet.appendRow(['ExerciseTypes', settingsObj.ExerciseTypes]); sheet.appendRow(['PRNMedList', settingsObj.PRNMedList]); 

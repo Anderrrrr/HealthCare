@@ -146,11 +146,19 @@
         </div>
         <div style="background-color: #f3e5f5; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 20px; border: 1px solid #ce93d8;">
           <h3 style="margin-top: 0; color: #6a1b9a;">💉 長效型胰島素</h3>
-          <label style="font-weight:bold; color:#4a148c;">每行一筆：時間=劑量U</label>
-          <textarea id="set_long_insulin" rows="3" placeholder="07:00=12"></textarea>
+          <div id="longInsulinRows"></div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <input type="time" id="longInsulinTime" style="margin:0; padding:10px; flex:1;">
+            <input type="number" id="longInsulinDose" placeholder="劑量 U" step="0.5" style="margin:0; padding:10px; flex:1;">
+          </div>
+          <button style="background-color: #8e24aa; padding: 10px;" onclick="addLongInsulinRow()">➕ 新增長效胰島素</button>
           <h3 style="margin-top: 15px; color: #6a1b9a; border-top:1px solid #ce93d8; padding-top:15px;">💉 短效型胰島素</h3>
-          <label style="font-weight:bold; color:#4a148c;">每行一筆：血糖低-高=劑量U，最高可用 401-=送醫院</label>
-          <textarea id="set_short_insulin" rows="6" placeholder="0-200=0&#10;201-250=4&#10;251-300=8&#10;301-350=8&#10;351-400=10&#10;401-=送醫院"></textarea>
+          <div id="shortInsulinRows"></div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <input type="text" id="shortInsulinRange" placeholder="血糖範圍，如 201-250" style="margin:0; padding:10px; flex:1;">
+            <input type="text" id="shortInsulinDose" placeholder="劑量 U / 送醫院" style="margin:0; padding:10px; flex:1;">
+          </div>
+          <button style="background-color: #8e24aa; padding: 10px;" onclick="addShortInsulinRow()">➕ 新增短效胰島素</button>
           <button style="background-color: #8e24aa; padding: 10px;" onclick="saveInsulinSettingsAdmin()">💾 儲存胰島素設定</button>
         </div>
       </div>
@@ -297,8 +305,7 @@
           }
         }).getMedSettingsAdmin();
         google.script.run.withSuccessHandler(settings => {
-          document.getElementById('set_long_insulin').value = settings.LongInsulinPlan || '07:00=12';
-          document.getElementById('set_short_insulin').value = settings.ShortInsulinScale || '0-200=0\n201-250=4\n251-300=8\n301-350=8\n351-400=10\n401-=送醫院';
+          renderInsulinAdmin(settings);
           document.getElementById('set_sugartimes').value = settings.SugarTimes || ''; document.getElementById('set_bptimes').value = settings.BPTimes || '';
           document.getElementById('set_urinecolors').value = settings.UrineColors || ''; document.getElementById('set_stoolcolors').value = settings.StoolColors || '';
           document.getElementById('set_exercises').value = settings.ExerciseTypes || ''; document.getElementById('set_prnmeds').value = settings.PRNMedList || ''; 
@@ -308,7 +315,7 @@
       }
       function saveSettingsAdmin() {
         const obj = {
-          LongInsulinPlan: document.getElementById('set_long_insulin').value, ShortInsulinScale: document.getElementById('set_short_insulin').value,
+          LongInsulinPlan: readLongInsulinRows(), ShortInsulinScale: readShortInsulinRows(),
           SugarTimes: document.getElementById('set_sugartimes').value, BPTimes: document.getElementById('set_bptimes').value,
           UrineColors: document.getElementById('set_urinecolors').value, StoolColors: document.getElementById('set_stoolcolors').value,
           ExerciseTypes: document.getElementById('set_exercises').value, PRNMedList: document.getElementById('set_prnmeds').value,
@@ -317,6 +324,36 @@
         google.script.run.withSuccessHandler(res => alert(res.message)).saveSystemSettingsAdmin(obj);
       }
       function saveInsulinSettingsAdmin() { saveSettingsAdmin(); }
+      function renderInsulinAdmin(settings) {
+        renderLongInsulinRows(parseLongInsulinPlan(settings.LongInsulinPlan === undefined ? '07:00=12' : settings.LongInsulinPlan));
+        renderShortInsulinRows(parseShortInsulinScale(settings.ShortInsulinScale === undefined ? '0-200=0\n201-250=4\n251-300=8\n301-350=8\n351-400=10\n401-=送醫院' : settings.ShortInsulinScale));
+      }
+      function renderLongInsulinRows(rows) {
+        const div = document.getElementById('longInsulinRows');
+        div.innerHTML = rows.length ? '' : '<p style="color:#999;font-size:14px;margin:0;">尚未設定</p>';
+        rows.forEach((r, i) => div.innerHTML += `<div data-plan="${r.time}=${r.dose}" style="display:flex; justify-content:space-between; border-bottom:1px solid #ce93d8; padding:8px 0; align-items:center;"><span><b>${r.time}</b> 打 <b>${r.dose}U</b></span><button onclick="removeLongInsulinRow(${i})" style="padding:4px 10px; width:auto; background:#e53935; font-size:13px; margin:0;">刪除</button></div>`);
+      }
+      function renderShortInsulinRows(rows) {
+        const div = document.getElementById('shortInsulinRows');
+        div.innerHTML = rows.length ? '' : '<p style="color:#999;font-size:14px;margin:0;">尚未設定</p>';
+        rows.forEach((r, i) => div.innerHTML += `<div data-plan="${r.range}=${r.dose}" style="display:flex; justify-content:space-between; border-bottom:1px solid #ce93d8; padding:8px 0; align-items:center;"><span>血糖 <b>${r.range}</b>：<b>${r.dose}${isDoseNumber(r.dose) ? 'U' : ''}</b></span><button onclick="removeShortInsulinRow(${i})" style="padding:4px 10px; width:auto; background:#e53935; font-size:13px; margin:0;">刪除</button></div>`);
+      }
+      function readLongInsulinRows() { return Array.from(document.querySelectorAll('#longInsulinRows [data-plan]')).map(el => el.dataset.plan).join('\n'); }
+      function readShortInsulinRows() { return Array.from(document.querySelectorAll('#shortInsulinRows [data-plan]')).map(el => el.dataset.plan).join('\n'); }
+      function addLongInsulinRow() {
+        const time = document.getElementById('longInsulinTime').value, dose = document.getElementById('longInsulinDose').value;
+        if(!time || !dose) return alert('請輸入時間和劑量');
+        const rows = parseLongInsulinPlan(readLongInsulinRows()); rows.push({time, dose}); renderLongInsulinRows(rows);
+        document.getElementById('longInsulinTime').value = ''; document.getElementById('longInsulinDose').value = '';
+      }
+      function addShortInsulinRow() {
+        const range = document.getElementById('shortInsulinRange').value.trim(), dose = document.getElementById('shortInsulinDose').value.trim();
+        if(!range || !dose) return alert('請輸入血糖範圍和劑量');
+        const rows = parseShortInsulinScale(readShortInsulinRows()); rows.push({range, dose}); renderShortInsulinRows(rows);
+        document.getElementById('shortInsulinRange').value = ''; document.getElementById('shortInsulinDose').value = '';
+      }
+      function removeLongInsulinRow(idx) { const rows = parseLongInsulinPlan(readLongInsulinRows()); rows.splice(idx, 1); renderLongInsulinRows(rows); }
+      function removeShortInsulinRow(idx) { const rows = parseShortInsulinScale(readShortInsulinRows()); rows.splice(idx, 1); renderShortInsulinRows(rows); }
       function saveMedMatrix() {
         let matrix = [];
         for(let i=0; i<7; i++) { let row = []; for(let j=0; j<4; j++) row.push(parseFloat(document.getElementById(`mat_${i}_${j}`).value) || 0); matrix.push(row); }
@@ -399,7 +436,7 @@
 
         const sugarTimes = sysSettings.SugarTimes ? sysSettings.SugarTimes.split(',') : ['04:00', '07:00', '09:30', '12:00', '15:00', '18:00', '21:00', '23:40'];
         const bpTimes = sysSettings.BPTimes ? sysSettings.BPTimes.split(',') : ['04:00', '07:00', '12:00', '15:00', '18:00', '21:00', '23:40'];
-        const longInsulin = parseLongInsulinPlan(sysSettings.LongInsulinPlan || '07:00=12');
+        const longInsulin = parseLongInsulinPlan(sysSettings.LongInsulinPlan === undefined ? '07:00=12' : sysSettings.LongInsulinPlan);
         DYN_TASKS.push({ category: '血糖', headerClass: 'bg-sugar', titleTw: '🩸 測量血糖', titleId: 'Cek Gula Darah', type: 'single', placeholder: '數值 (Angka)', times: sugarTimes });
         DYN_TASKS.push({ category: '支氣管擴張劑', headerClass: 'bg-inhaler', titleTw: '💨 支氣管擴張劑', titleId: 'Obat Inhaler (Semprot)', type: 'check', times: ['07:00', '15:00', '23:00'] });
         DYN_TASKS.push({ category: '語言訓練', headerClass: 'bg-language', titleTw: '🗣️ 語言訓練', titleId: 'Latihan Bicara', type: 'check', times: ['09:00', '15:30'] });
@@ -418,6 +455,7 @@
               let valDisplay = existingLog.value === '完成' ? '完成 / Selesai' : existingLog.value;
               if (task.type === 'insulin') valDisplay = `已打 ${existingLog.value}`; 
               actionHtml = `<div class="log-done"><strong>✅ ${valDisplay}</strong><div class="log-done-sub">${existingLog.time} / ${existingLog.caregiver}</div></div>`;
+              if (task.category === '血糖') actionHtml += renderShortInsulinAction(time, existingLog.value, logs);
             } else {
               const idBase = `input_${task.category}_${time.replace(':','')}`;
               if (task.type === 'single') actionHtml = `<input type="number" id="${idBase}" placeholder="${task.placeholder}"><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 5px; width: 100%;">💾 儲存 / Simpan</button>`;
@@ -437,9 +475,16 @@
           return parts.length === 2 ? { time: parts[0].trim(), dose: parts[1].replace(/[uU]/g, '').trim() } : null;
         }).filter(x => x && x.time && x.dose);
       }
+      function parseShortInsulinScale(text) {
+        return String(text || '').split(/\n|,/).map(line => {
+          const parts = line.split('=');
+          return parts.length === 2 ? { range: parts[0].trim(), dose: parts[1].replace(/[uU]/g, '').trim() } : null;
+        }).filter(x => x && x.range && x.dose);
+      }
+      function isDoseNumber(dose) { return dose !== '' && !isNaN(parseFloat(dose)); }
       function shortInsulinAdvice(value) {
         const sugar = parseFloat(value);
-        const rules = String(sysSettings.ShortInsulinScale || '0-200=0\n201-250=4\n251-300=8\n301-350=8\n351-400=10\n401-=送醫院').split(/\n|,/);
+        const rules = String(sysSettings.ShortInsulinScale === undefined ? '0-200=0\n201-250=4\n251-300=8\n301-350=8\n351-400=10\n401-=送醫院' : sysSettings.ShortInsulinScale).split(/\n|,/);
         for (const rule of rules) {
           const parts = rule.split('='), range = (parts[0] || '').split('-');
           if (parts.length !== 2) continue;
@@ -448,6 +493,15 @@
         }
         return '';
       }
+      function renderShortInsulinAction(time, sugarValue, logs) {
+        const advice = shortInsulinAdvice(sugarValue);
+        if (!advice) return '';
+        if (advice === '0') return `<div style="margin-top:8px; color:#2e7d32; font-weight:bold;">短效型胰島素建議：不打</div>`;
+        if (!isDoseNumber(advice)) return `<div style="margin-top:8px; color:#d32f2f; font-weight:bold;">短效型胰島素建議：${advice}</div>`;
+        const done = logs.find(l => l.category === '短效型胰島素' && String(l.scheduledTime) === time);
+        if (done) return `<div class="log-done" style="margin-top:8px;"><strong>✅ 短效已打 ${done.value}</strong><div class="log-done-sub">${done.time} / ${done.caregiver}</div></div>`;
+        return `<div style="margin-top:8px; border:1px solid #ce93d8; border-radius:8px; padding:10px; text-align:center;"><div style="color:#6a1b9a; font-weight:bold; margin-bottom:8px;">短效型胰島素建議：${advice}U</div><button class="btn-save" onclick="saveLog('短效型胰島素', '${time}', 'shortInsulin', null, '${advice}')" style="width:100%; background-color:#8e24aa;">💉 已施打，確認紀錄</button></div>`;
+      }
 
       function saveLog(category, scheduledTime, type, idBase, targetDose) {
         let value = '';
@@ -455,9 +509,8 @@
         else if (type === 'double') { const high = document.getElementById(idBase + '_high').value; const low = document.getElementById(idBase + '_low').value; if (!high || !low) { alert('請輸入完整血壓！\nHarap isi tensi lengkap!'); return; } value = high + '/' + low; } 
         else if (type === 'check') { if (category === '胰島素') value = targetDose + 'u'; else value = '完成'; }
         else if (type === 'insulin') { const el = document.getElementById(idBase); if (!el.value) { alert('請輸入胰島素單位！\nHarap isi unit insulin!'); return; } value = el.value + 'u'; }
-        const advice = category === '血糖' ? shortInsulinAdvice(value) : '';
-        const note = advice ? `\n\n短效型胰島素建議：${advice === '0' ? '不打' : advice}` : '';
-        if(!confirm(`確定儲存？\nYakin ingin menyimpan?\n\n[ ${scheduledTime} - ${category} : ${value} ]${note}`)) return;
+        else if (type === 'shortInsulin') value = targetDose + 'u';
+        if(!confirm(`確定儲存？\nYakin ingin menyimpan?\n\n[ ${scheduledTime} - ${category} : ${value} ]`)) return;
         const btn = event.target; btn.innerText = '儲存中 / Menyimpan...'; btn.disabled = true;
         google.script.run.withSuccessHandler(res => loadDashboardData()).addLog(currentNurse, category, scheduledTime, value);
       }
