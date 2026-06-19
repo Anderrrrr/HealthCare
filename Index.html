@@ -453,7 +453,7 @@
             let actionHtml = '';
             if (existingLog) {
               let valDisplay = existingLog.value === '完成' ? '完成 / Selesai' : existingLog.value;
-              if (task.type === 'insulin') valDisplay = `已打 ${existingLog.value}`; 
+              if (task.type === 'insulin') valDisplay = `已打 ${existingLog.value} / Sudah suntik ${existingLog.value}`; 
               actionHtml = `<div class="log-done"><strong>✅ ${valDisplay}</strong><div class="log-done-sub">${existingLog.time} / ${existingLog.caregiver}</div></div>`;
               if (task.category === '血糖') actionHtml += renderShortInsulinAction(time, existingLog.value, logs);
             } else {
@@ -461,7 +461,7 @@
               if (task.type === 'single') actionHtml = `<input type="number" id="${idBase}" placeholder="${task.placeholder}"><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 5px; width: 100%;">💾 儲存 / Simpan</button>`;
               else if (task.type === 'double') actionHtml = `<div class="double-input"><div style="flex: 1; text-align: center;"><div style="font-size: 14px; color: #fb8c00; font-weight: bold; margin-bottom: 5px;">高 / Atas</div><input type="number" id="${idBase}_high" placeholder="例: 120" style="margin: 0;"></div><span>/</span><div style="flex: 1; text-align: center;"><div style="font-size: 14px; color: #fb8c00; font-weight: bold; margin-bottom: 5px;">低 / Bawah</div><input type="number" id="${idBase}_low" placeholder="例: 80" style="margin: 0;"></div></div><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 10px; width: 100%;">💾 儲存 / Simpan</button>`;
               else if (task.type === 'check') actionHtml = `<button class="btn-check" onclick="saveLog('${task.category}', '${time}', '${task.type}', null, '${targetDose}')">👉 點擊打卡 (Tekan)</button>`;
-              else if (task.type === 'insulin') actionHtml = `<input type="number" id="${idBase}" value="${targetDose || ''}" placeholder="輸入單位 (unit)" step="0.5"><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 5px; width: 100%; background-color:#8e24aa;">💾 儲存胰島素 / Simpan Insulin</button>`;
+              else if (task.type === 'insulin') actionHtml = `<input type="number" id="${idBase}" value="${targetDose || ''}" placeholder="輸入單位 / Isi unit" step="0.5"><button class="btn-save" onclick="saveLog('${task.category}', '${time}', '${task.type}', '${idBase}')" style="margin-top: 5px; width: 100%; background-color:#8e24aa;">💾 儲存胰島素 / Simpan Insulin</button>`;
             }
             cardHtml += `<div class="time-row"><div class="time-label" style="${task.category === '胰島素' ? 'line-height: 1.2;' : ''}">${timeLabelDisplay}</div><div class="time-action">${actionHtml}</div></div>`;
           });
@@ -496,11 +496,15 @@
       function renderShortInsulinAction(time, sugarValue, logs) {
         const advice = shortInsulinAdvice(sugarValue);
         if (!advice) return '';
-        if (advice === '0') return `<div style="margin-top:8px; color:#2e7d32; font-weight:bold;">短效型胰島素建議：不打</div>`;
-        if (!isDoseNumber(advice)) return `<div style="margin-top:8px; color:#d32f2f; font-weight:bold;">短效型胰島素建議：${advice}</div>`;
+        if (advice === '0') return `<div style="margin-top:8px; color:#2e7d32; font-weight:bold;">短效型胰島素建議：不打<br><span style="font-size:14px;">Saran insulin kerja cepat: tidak perlu suntik</span></div>`;
+        if (!isDoseNumber(advice)) return `<div style="margin-top:8px; color:#d32f2f; font-weight:bold;">短效型胰島素建議：${advice}<br><span style="font-size:14px;">Saran insulin kerja cepat: ${advice}</span></div>`;
         const done = logs.find(l => l.category === '短效型胰島素' && String(l.scheduledTime) === time);
-        if (done) return `<div class="log-done" style="margin-top:8px;"><strong>✅ 短效已打 ${done.value}</strong><div class="log-done-sub">${done.time} / ${done.caregiver}</div></div>`;
-        return `<div style="margin-top:8px; border:1px solid #ce93d8; border-radius:8px; padding:10px; text-align:center;"><div style="color:#6a1b9a; font-weight:bold; margin-bottom:8px;">短效型胰島素建議：${advice}U</div><button class="btn-save" onclick="saveLog('短效型胰島素', '${time}', 'shortInsulin', null, '${advice}')" style="width:100%; background-color:#8e24aa;">💉 已施打，確認紀錄</button></div>`;
+        if (done) return `<div class="log-done" style="margin-top:8px;"><strong>✅ 短效已打 ${done.value}<br>Suntik cepat sudah: ${done.value}</strong><div class="log-done-sub">${done.time} / ${done.caregiver}</div></div>`;
+        return `<div style="margin-top:8px; border:1px solid #ce93d8; border-radius:8px; padding:10px; text-align:center;"><div style="color:#6a1b9a; font-weight:bold; margin-bottom:8px;">短效型胰島素建議：${advice}U<br><span style="font-size:14px;">Saran insulin kerja cepat: ${advice}U</span></div><button class="btn-save" onclick="saveLog('短效型胰島素', '${time}', 'shortInsulin', null, '${advice}')" style="width:100%; background-color:#8e24aa;">💉 已施打，確認紀錄<br>Selesai suntik, catat</button></div>`;
+      }
+      function displayCategory(category) {
+        const names = { '血糖': '血糖 / Gula darah', '短效型胰島素': '短效型胰島素 / Insulin kerja cepat', '長效型胰島素': '長效型胰島素 / Insulin kerja panjang' };
+        return names[category] || category;
       }
 
       function saveLog(category, scheduledTime, type, idBase, targetDose) {
@@ -510,7 +514,7 @@
         else if (type === 'check') { if (category === '胰島素') value = targetDose + 'u'; else value = '完成'; }
         else if (type === 'insulin') { const el = document.getElementById(idBase); if (!el.value) { alert('請輸入胰島素單位！\nHarap isi unit insulin!'); return; } value = el.value + 'u'; }
         else if (type === 'shortInsulin') value = targetDose + 'u';
-        if(!confirm(`確定儲存？\nYakin ingin menyimpan?\n\n[ ${scheduledTime} - ${category} : ${value} ]`)) return;
+        if(!confirm(`確定儲存？\nYakin ingin menyimpan?\n\n[ ${scheduledTime} - ${displayCategory(category)} : ${value} ]`)) return;
         const btn = event.target; btn.innerText = '儲存中 / Menyimpan...'; btn.disabled = true;
         google.script.run.withSuccessHandler(res => loadDashboardData()).addLog(currentNurse, category, scheduledTime, value);
       }
